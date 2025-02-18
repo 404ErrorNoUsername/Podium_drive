@@ -116,8 +116,8 @@ leftMotor.writeMicroseconds(pwmLeftMotor);
 rightMotor.writeMicroseconds(pwmRightMotor);   
 
 // debuging console prints pwm values going to the left and right side of the drive train.
-  Serial.print("PWM Left Motor");
-  Serial.print(pwmLeftMotor);
-  Serial.print("PWM Right Motor");
-  Serial.print(pwmRightMotor);
+Serial.print("PWM Left Motor");
+Serial.print(pwmLeftMotor);
+Serial.print("PWM Right Motor");
+Serial.print(pwmRightMotor);
 }
