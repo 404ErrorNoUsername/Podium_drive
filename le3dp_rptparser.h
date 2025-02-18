@@ -19,6 +19,8 @@ struct GamePadEventData
   uint8_t buttons_b;
 };
 
+
+
 class JoystickEvents
 {
 public:
