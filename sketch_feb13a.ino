@@ -22,9 +22,8 @@ JoystickEvents                                  JoyEvents;
 JoystickReportParser                            Joy(&JoyEvents);
 
 const int leftRearMotor = 9;
-const int leftFrontMotor = 11;
 const int rightFrontMotor = 6;
-const int rightRearMotor = 5;
+
 
 void setup()
 {
@@ -42,10 +41,10 @@ void setup()
   if (!Hid.SetReportParser(0, &Joy))
       ErrorMessage<uint8_t>(PSTR("SetReportParser"), 1  );
 
-          pinMode(5, OUTPUT);
+          
           pinMode(6, OUTPUT);
           pinMode(9, OUTPUT);
-          pinMode(11, OUTPUT);
+         
     Serial.begin(115200);
 
   
