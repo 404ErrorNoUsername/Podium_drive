@@ -2,134 +2,69 @@
 #include "le3dp_rptparser.h"
 #include "Servo.h"
 
-//I DECLARE MOTORS
+//I DECLARE MOTOR!
 Servo leftMotor, rightMotor;
 
-//nerd stuff to parse joystick data
-JoystickReportParser::JoystickReportParser(JoystickEvents *evt) :
-	joyEvents(evt)
-{}
+//nerd junk
+JoystickReportParser::JoystickReportParser(JoystickEvents *evt) : joyEvents(evt) {}
 
-//more nerd stuff
-void JoystickReportParser::Parse(USBHID *hid, bool is_rpt_id, uint8_t len, uint8_t *buf)
-{
-	bool match = true;
-
-	// Checking if there are changes in report since the method was last called
-	for (uint8_t i=0; i<RPT_GAMEPAD_LEN; i++) {
-		if( buf[i] != oldPad[i] ) {
-			match = false;
-			break;
-		}
-  }
-  	// Calling Game Pad event handler
-	if (!match && joyEvents) {
-		joyEvents->OnGamePadChanged((const GamePadEventData*)buf);
-
-		for (uint8_t i=0; i<RPT_GAMEPAD_LEN; i++) oldPad[i] = buf[i];
-	}
+//black magic and more nerd junk
+void JoystickReportParser::Parse(USBHID *hid, bool is_rpt_id, uint8_t len, uint8_t *buf) {
+    bool match = true;
+    for (uint8_t i = 0; i < RPT_GAMEPAD_LEN; i++) {
+        if (buf[i] != oldPad[i]) {
+            match = false;
+            break;
+        }
+    }
+    if (!match && joyEvents) {
+        joyEvents->OnGamePadChanged((const GamePadEventData*)buf);
+        memcpy(oldPad, buf, RPT_GAMEPAD_LEN);
+    }
 }
 
-
-//The meat and 'taters
-void JoystickEvents::OnGamePadChanged(const GamePadEventData *evt)
-{
-// grab joystick data and set variables.
-int twist =  evt->twist;
-int drive =  evt->y;
-int slide = evt->slider;
-
-// Define joystick twist range
-const int driveMin = 0;
-const int driveMax = 1023;
-const int driveNeutral = 508;
-
-const int twistRevMin = 0;
-const int twistRevMax = 255;
-const int twistRevNeutral = 127;
-
-const int twistMin = 0;
-const int twistMax = 255;
-const int twistNeutral = 127;
-const int deadband = 5;
-
-float percent = map(slide, 255, 0, 0.25*100, 1.00*100);
-float percentage = percent/100;
-
-//map y axis to drive
-int pwmDrive = map(drive, driveMin, driveMax, 1000, 2000);
-pwmDrive = constrain(pwmDrive, 1000, 2000);
-pwmDrive = 1500  + (pwmDrive-1500) * percentage;
-
-// Map twist to PWM signal (1000-2000 µs)
-int pwmTwistValue = map(twist, twistMin, twistMax, 1000, 2000);
-pwmTwistValue = constrain(pwmTwistValue, 1000, 2000);
-int pwmTwistRev = map(twist, twistMin, twistMax, 2000, 1000);
-pwmTwistRev = constrain(pwmTwistRev, 1000, 2000);
+//meat and taters
+void JoystickEvents::OnGamePadChanged(const GamePadEventData *evt) {
     
-// Creates a turning offset and throws some nerd code on line 73 to handle the turning percentage.
-int pwmTurn = map(twist, twistMin, twistMax, 250, -250); 
-pwmTurn = constrain(pwmTurn, -250, 250);
-pwmTurn = (pwmTurn >0) ? pwmTurn *sqrt(percentage) : pwmTurn *sqrt(percentage);
+    //grab needed joystick data
+    int twist = evt->twist;
+    int drive = evt->y;
+    int slide = evt->slider;
 
-// blend y and twist pwm signals for smooth turning. USE THESE TO WRITE PWM SIGNAL!
-int pwmLeftMotor = pwmDrive + pwmTurn;
-int pwmRightMotor = pwmDrive - pwmTurn;
-    
-    
-// Apply deadband correction
-if (abs(drive - driveNeutral) < deadband) {
-  drive = driveNeutral;
-}
-if (abs(twist - twistRevNeutral) < deadband) {
-  twist = twistRevNeutral;
-}
-    
-  if (abs(twist - twistNeutral) < deadband) {
-      twist = twistNeutral;
-}
+    //declare constants for drive, twist and deadband.
+    const int driveMin = 0, driveMax = 1023, driveNeutral = 508;
+    const int twistMin = 0, twistMax = 255, twistNeutral = 127;
+    const int deadband = 5;
 
-    
-//makes sure pwm signal doesn't exceed expected range.
-pwmLeftMotor = constrain(pwmLeftMotor, 1000, 2000);
-pwmRightMotor = constrain(pwmRightMotor, 1000, 2000);
+    //need a floaty boy for decimals
+    float percentage = map(slide, 255, 0, 25, 100) / 100.0;
 
+    //declares pwm signal from y axis and applies percentage limit based off of the sliders position.
+    int pwmDrive = constrain(map(drive, driveMin, driveMax, 1000, 2000), 1000, 2000);
+    pwmDrive = 1500 + (pwmDrive - 1500) * percentage;
 
+    //declares pwm signal for twist axis and applies percentage limit. Bunch of weird nerd magic going on here.
+    int pwmTurn = constrain(map(twist, twistMin, twistMax, 250, -250), -250, 250) * sqrt(percentage);
 
-//IDK what's going on here but it's important
-Serial.print("X: ");
-PrintHex<uint16_t>(evt->x, 0x80);
-Serial.print(" Y: ");
-PrintHex<uint16_t>(evt->y, 0x80);
-Serial.print(" Hat Switch: ");
-PrintHex<uint8_t>(evt->hat, 0x80);
-Serial.print(" Twist: ");
-PrintHex<uint16_t>(evt->twist, 0x80);
-Serial.print(" Slider: ");
-PrintHex<uint8_t>(evt->slider, 0x80);
-Serial.print(" Buttons A: ");
-PrintHex<uint8_t>(evt->buttons_a, 0x80);
-Serial.print(" Buttons B: ");
-PrintHex<uint8_t>(evt->buttons_b, 0x80);
-Serial.println("");
-    
-// Send PWM signal to Victor SPX using Servo library I'm sending the pwm signal out of pin 9 to two different victor spx because thats sketchy and on par with my opperations. 
-leftMotor.attach(9);
-rightMotor.attach(6);
-    
-//sends signal to motor controller.
-leftMotor.writeMicroseconds(pwmLeftMotor);
-rightMotor.writeMicroseconds(pwmRightMotor);   
+    //declares final pwm signal and blends for smooth turning
+    int pwmLeftMotor = constrain(pwmDrive + pwmTurn, 1000, 2000);
+    int pwmRightMotor = constrain(pwmDrive - pwmTurn, 1000, 2000);
 
-// debuging console prints pwm values going to the left and right side of the drive train.
-//Serial.print("slider");
-//Serial.print(evt->slider);
-//Serial.print("percent");
-Serial.print(percent);
-Serial.print("  ");
-Serial.print(percentage);
-Serial.print("drive");
-Serial.print(pwmLeftMotor);
-Serial.print(" ");
-Serial.print(pwmRightMotor);
+    //applies deadband so joystick doesnt wig out when no input is given.
+    if (abs(drive - driveNeutral) < deadband) drive = driveNeutral;
+    if (abs(twist - twistNeutral) < deadband) twist = twistNeutral;
+
+    //WHERE ARE WE GOING?!?!
+    leftMotor.attach(9);
+    rightMotor.attach(6);
+
+    //FULL SEND!!
+    leftMotor.writeMicroseconds(pwmLeftMotor);
+    rightMotor.writeMicroseconds(pwmRightMotor);
+
+  //prints values for debugging
+    Serial.print("Twist: "); Serial.print(evt->twist);
+    Serial.print(" Slider: "); Serial.print(evt->slider);
+    Serial.print(" Left Motor: "); Serial.print(pwmLeftMotor);
+    Serial.print(" Right Motor: "); Serial.println(pwmRightMotor);
 }
