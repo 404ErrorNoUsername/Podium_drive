@@ -37,6 +37,7 @@ void JoystickEvents::OnGamePadChanged(const GamePadEventData *evt)
 // grab joystick data and set variables.
 int twist =  evt->twist;
 int drive =  evt->y;
+int slide = evt->slider;
 
 // Define joystick twist range
 const int driveMin = 0;
@@ -52,9 +53,13 @@ const int twistMax = 255;
 const int twistNeutral = 127;
 const int deadband = 5;
 
+float percent = map(slide, 255, 0, 0.25*100, 1.00*100);
+float percentage = percent/100;
+
 //map y axis to drive
 int pwmDrive = map(drive, driveMin, driveMax, 1000, 2000);
 pwmDrive = constrain(pwmDrive, 1000, 2000);
+pwmDrive = 1500  + (pwmDrive-1500) * percentage;
 
 // Map twist to PWM signal (1000-2000 µs)
 int pwmTwistValue = map(twist, twistMin, twistMax, 1000, 2000);
@@ -62,9 +67,10 @@ pwmTwistValue = constrain(pwmTwistValue, 1000, 2000);
 int pwmTwistRev = map(twist, twistMin, twistMax, 2000, 1000);
 pwmTwistRev = constrain(pwmTwistRev, 1000, 2000);
     
-// Creates a turning offset
+// Creates a turning offset and throws some nerd code on line 73 to handle the turning percentage.
 int pwmTurn = map(twist, twistMin, twistMax, 250, -250); 
 pwmTurn = constrain(pwmTurn, -250, 250);
+pwmTurn = (pwmTurn >0) ? pwmTurn *sqrt(percentage) : pwmTurn *sqrt(percentage);
 
 // blend y and twist pwm signals for smooth turning. USE THESE TO WRITE PWM SIGNAL!
 int pwmLeftMotor = pwmDrive + pwmTurn;
@@ -116,8 +122,14 @@ leftMotor.writeMicroseconds(pwmLeftMotor);
 rightMotor.writeMicroseconds(pwmRightMotor);   
 
 // debuging console prints pwm values going to the left and right side of the drive train.
-Serial.print("PWM Left Motor");
+//Serial.print("slider");
+//Serial.print(evt->slider);
+//Serial.print("percent");
+Serial.print(percent);
+Serial.print("  ");
+Serial.print(percentage);
+Serial.print("drive");
 Serial.print(pwmLeftMotor);
-Serial.print("PWM Right Motor");
+Serial.print(" ");
 Serial.print(pwmRightMotor);
 }
