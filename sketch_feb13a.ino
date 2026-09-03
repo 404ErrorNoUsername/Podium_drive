@@ -44,6 +44,7 @@ void setup()
           
           pinMode(6, OUTPUT);
           pinMode(9, OUTPUT);
+          pinMode(HORN_PIN, OUTPUT);
          
     Serial.begin(115200);
 
