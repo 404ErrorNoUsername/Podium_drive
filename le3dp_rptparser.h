@@ -1,6 +1,6 @@
 #if !defined(__HIDJOYSTICKRPTPARSER_H__)
 #define __HIDJOYSTICKRPTPARSER_H__
-
+#define HORN_PIN 5
 #include <usbhid.h>
 
 struct GamePadEventData
