@@ -30,7 +30,10 @@ void JoystickEvents::OnGamePadChanged(const GamePadEventData *evt) {
     int twist = evt->twist;
     int drive = evt->y;
     int slide = evt->slider;
-
+    // HORN
+    bool hornButtonPressed = evt->buttons_a & 0x01;
+    digitalWrite(HORN_PIN, hornButtonPressed ? HIGH : LOW);
+    
     //declare constants for drive, twist and deadband.
     const int driveMin = 0, driveMax = 1023, driveNeutral = 508;
     const int twistMin = 0, twistMax = 255, twistNeutral = 127;
